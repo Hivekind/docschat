@@ -46,7 +46,12 @@ class WelcomeController < ActionController::Base
   end
 
   def index
-    render inline: wrapper(Meeting.find(Meeting.pluck(:id).sample).ai_action_items)
+    random_meeting_id = Meeting.pluck(:id).sample
+    texts = [
+      Meeting.find(random_meeting_id).ai_summary,
+      Meeting.find(random_meeting_id).ai_action_items,
+    ].join("\n\n---\n\n")
+    render inline: wrapper(texts)
   end
 end
 
