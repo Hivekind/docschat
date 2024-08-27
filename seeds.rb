@@ -86,6 +86,9 @@ File.open("train.json", "r") do |f|
 
     transcript = json["transcript"]
     unit_date = uid.split("_")
+
+    puts "Generating ai summary"
+
     ai_summary = ""
     llm.chat(messages: [{role: "user", content: prompt_summary(transcript)}]) do |r|
       resp = r.chat_completion
@@ -93,12 +96,16 @@ File.open("train.json", "r") do |f|
       print resp
     end
 
+    puts "Generating ai action items"
+
     ai_action_items = ""
     llm.chat(messages: [{role: "user", content: prompt_action_items(transcript)}]) do |r|
       resp = r.chat_completion
       ai_action_items += resp
       print resp
     end
+
+    puts
 
     Meeting.create!(
       topic: topic,
@@ -111,6 +118,8 @@ File.open("train.json", "r") do |f|
     )
 
     puts "Processed #{json["uid"]}"
+    puts
     progressbar.increment
+    puts
   end
 end
