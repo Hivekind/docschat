@@ -32,10 +32,11 @@ class Logger
 
 end
 
+model = "gemma2:2b"
 llm = Langchain::LLM::Ollama.new(url: "http://localhost:11434", default_options: {
-  chat_completion_model_name: "gemma2",
-  completion_model_name: "gemma2",
-  embeddings_model_name: "gemma2",
+  chat_completion_model_name: model,
+  completion_model_name: model,
+  embeddings_model_name: model,
 })
 
 def prompt_summary(text)
@@ -88,7 +89,7 @@ File.open("train.json", "r") do |f|
     ai_summary = ""
     llm.chat(messages: [{role: "user", content: prompt_summary(transcript)}]) do |r|
       resp = r.chat_completion
-      ai_summary += resp
+      ai_summary += "#{resp}"
       print resp
     end
 
@@ -97,7 +98,7 @@ File.open("train.json", "r") do |f|
     ai_action_items = ""
     llm.chat(messages: [{role: "user", content: prompt_action_items(transcript)}]) do |r|
       resp = r.chat_completion
-      ai_action_items += resp
+      ai_action_items += "#{resp}"
       print resp
     end
 
