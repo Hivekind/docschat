@@ -30,6 +30,11 @@ ActiveRecord::Schema.define do
   end
 end
 
+Langchain.logger.level = :warn
+class Logger
+
+end
+
 llm = Langchain::LLM::Ollama.new(url: "http://localhost:11434", default_options: {
   chat_completion_model_name: "gemma2",
   completion_model_name: "gemma2",
@@ -59,9 +64,12 @@ end
 class Meeting < ActiveRecord::Base
 end
 
+line_count = `wc -l "#{"train.json"}"`.strip.split(' ')[0].to_i
 
 File.open("train.json", "r") do |f|
-  progressbar = ProgressBar.create(total: f.count)
+  puts "Processing #{line_count} entries"
+  progressbar = ProgressBar.create(total: line_count, format: '%a <%B> %p%% %t Processed: %c from %C')
+
   f.each_line do |line|
     # topic group date entry
     json = JSON.parse(line)
@@ -79,6 +87,7 @@ File.open("train.json", "r") do |f|
       ai_action_items: ai_action_items,
     )
 
+    puts "Processed #{json["uid"]}"
     progressbar.increment
   end
 end
