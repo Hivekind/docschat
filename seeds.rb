@@ -3,6 +3,7 @@ require 'rails/all'
 require "dotenv"
 require "langchain"
 require "faraday"
+require 'ruby-progressbar'
 
 Dotenv.load
 
@@ -12,7 +13,7 @@ ActiveRecord::Base.establish_connection(
   host: ENV['DB_HOST'], port: ENV['DB_PORT'],
   username: ENV['DB_USER'], password: ENV['DB_PASS']
 )
-ActiveRecord::Base.logger = Logger.new(STDOUT)
+# ActiveRecord::Base.logger = Logger.new(STDOUT)
 
 ActiveRecord::Schema.define do
   enable_extension "plpgsql"
@@ -58,7 +59,9 @@ end
 class Meeting < ActiveRecord::Base
 end
 
+
 File.open("train.json", "r") do |f|
+  progressbar = ProgressBar.create(total: f.count)
   f.each_line do |line|
     # topic group date entry
     json = JSON.parse(line)
@@ -76,6 +79,6 @@ File.open("train.json", "r") do |f|
       ai_action_items: ai_action_items,
     )
 
-    puts "meeting created: #{json['uid']}"
+    progressbar.increment
   end
 end
