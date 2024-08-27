@@ -1,0 +1,26 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    restart: always
+    volumes:
+      - ./docker-data/db:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_PASSWORD: example
+
+  ollama:
+    image: ollama/ollama:latest
+    profiles: ["dev"]
+    ports:
+      - 11434:11434
+    volumes:
+      - .:/code
+      - ./docker-data/ollama:/root/.ollama
+    container_name: ollama
+    pull_policy: always
+    tty: true
+    restart: always
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+      - OLLAMA_HOST=0.0.0.0
