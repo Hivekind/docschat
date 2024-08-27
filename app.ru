@@ -8,11 +8,7 @@ require 'json'
 Dotenv.load
 
 ENV["DATABASE_URL"] ||= "postgres://#{ENV['DB_USER']}:#{ENV['DB_PASS']}@#{ENV['DB_HOST']}:#{ENV['DB_PORT']}/#{ENV['DB_NAME']}?schema=public"
-ActiveRecord::Base.establish_connection(
-  adapter: 'postgresql',
-  host: ENV['DB_HOST'], port: ENV['DB_PORT'],
-  username: ENV['DB_USER'], password: ENV['DB_PASS']
-)
+ActiveRecord::Base.establish_connection
 ActiveRecord::Base.logger = Logger.new(STDOUT)
 
 class App < Rails::Application
