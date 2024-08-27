@@ -17,11 +17,12 @@ ActiveRecord::Base.establish_connection(
 
 ActiveRecord::Schema.define do
   enable_extension "plpgsql"
-  create_table :meetings, force: true do |t|
+  create_table :meetings, if_not_exists: true do |t|
     t.string :topic
     t.text :entry
     t.string :unit
     t.date :date
+    t.string :uid
 
     t.text :ai_summary
     t.text :ai_action_items
@@ -68,21 +69,32 @@ line_count = `wc -l "#{"train.json"}"`.strip.split(' ')[0].to_i
 
 File.open("train.json", "r") do |f|
   puts "Processing #{line_count} entries"
-  progressbar = ProgressBar.create(total: line_count, format: '%a <%B> %p%% %t Processed: %c from %C')
+  progressbar = ProgressBar.create(total: line_count, format: '%a <%B> %p%% %t Processed: %c from %C %e')
 
   f.each_line do |line|
     # topic group date entry
     json = JSON.parse(line)
-    unit_date = json["uid"].split("_")
+
+    topic = json["summary"]
+    uid = json["uid"]
+
+    unless (m = Meeting.find_by(uid: uid)).nil?
+      puts "skipping #{uid} #{m.id}"
+      progressbar.increment
+      next
+    end
+
     transcript = json["transcript"]
+    unit_date = uid.split("_")
     ai_summary = llm.chat(messages: [{role: "user", content: prompt_summary(transcript)}]).chat_completion
     ai_action_items = llm.chat(messages: [{role: "user", content: prompt_action_items(transcript)}]).chat_completion
 
     Meeting.create!(
-      topic: json["summary"],
+      topic: topic,
       entry: transcript,
       unit: unit_date[0],
       date: Date.strptime(unit_date[1], "%m%d%Y"),
+      uid: uid,
       ai_summary: ai_summary,
       ai_action_items: ai_action_items,
     )
