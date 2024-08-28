@@ -77,7 +77,7 @@ File.open("train.json", "r") do |f|
 
     unless (m = Meeting.find_by(uid: uid)).nil?
       puts "skipping #{uid} #{m.id}"
-      progressbar.increment
+      progressbar.total -= 1
       next
     end
 
