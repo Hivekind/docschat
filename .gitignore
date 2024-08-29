@@ -1,3 +1,6 @@
 docker-data
 log
 .env
+node_modules
+.ruby-lsp
+tmp
