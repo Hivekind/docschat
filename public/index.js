@@ -23,6 +23,26 @@ import AutoSizer from "react-virtualized-auto-sizer";
 const queryClient = new QueryClient();
 const consumer = createConsumer();
 
+function ArrowUpDownIcon() {
+  return (
+    <svg
+      class="h-6 w-6 rotate-0 transform text-gray-400 group-open:rotate-180"
+      xmlns="http://www.w3.org/2000/svg"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke-width="2"
+      stroke="currentColor"
+      aria-hidden="true"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        d="M19 9l-7 7-7-7"
+      ></path>
+    </svg>
+  );
+}
+
 function MeetingItem(props) {
   const { currentMeetingId } = props;
   const { isPending, error, data } = useQuery({
@@ -36,12 +56,47 @@ function MeetingItem(props) {
 
   const { aiSummary, aiActionItems, entry, date, unit, id } = data;
   return (
-    <div
-      className="prose"
-      dangerouslySetInnerHTML={{
-        __html: marked.parse(aiSummary + `\n\n---\n\n` + aiActionItems),
-      }}
-    ></div>
+    <>
+      <section class="grid grid-cols-1 gap-y-3 divide-y prose">
+        <details open class="group py-1">
+          <summary class="flex cursor-pointer flex-row items-center justify-between py-1 font-semibold text-gray-800 marker:[font-size:0px]">
+            AI Summary <ArrowUpDownIcon />
+          </summary>
+          <div
+            className="prose"
+            dangerouslySetInnerHTML={{
+              __html: marked.parse(aiSummary),
+            }}
+          ></div>
+        </details>
+
+        <details class="group py-1">
+          <summary class="flex cursor-pointer flex-row items-center justify-between py-1 font-semibold text-gray-800 marker:[font-size:0px]">
+            AI Action Items
+            <ArrowUpDownIcon />
+          </summary>
+          <div
+            className="prose"
+            dangerouslySetInnerHTML={{
+              __html: marked.parse(aiActionItems),
+            }}
+          ></div>
+        </details>
+
+        <details class="group py-1">
+          <summary class="flex cursor-pointer flex-row items-center justify-between py-1 font-semibold text-gray-800 marker:[font-size:0px]">
+            Full Transcript
+            <ArrowUpDownIcon />
+          </summary>
+          <div
+            className="prose"
+            dangerouslySetInnerHTML={{
+              __html: marked.parse(entry),
+            }}
+          ></div>
+        </details>
+      </section>
+    </>
   );
 }
 
@@ -252,7 +307,7 @@ function App() {
             />
           </div>
           <div className="w-2/5 flex h-full">
-            <div className="bg-white p-4 overflow-y-auto border-r-2">
+            <div className="bg-white p-4 overflow-y-auto border-r-2 w-full">
               <MeetingItem currentMeetingId={currentMeetingId} />
             </div>
           </div>
