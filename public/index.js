@@ -16,6 +16,10 @@ import {
   Tooltip,
   TextField,
   Button,
+  Accordion,
+  AccordionSummary,
+  AccordionDetails,
+  Typography,
 } from "@mui/material";
 import { FixedSizeList } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
@@ -57,45 +61,45 @@ function MeetingItem(props) {
   const { aiSummary, aiActionItems, entry, date, unit, id } = data;
   return (
     <>
-      <section class="grid grid-cols-1 gap-y-3 divide-y prose">
-        <details open class="group py-1">
-          <summary class="flex cursor-pointer flex-row items-center justify-between py-1 font-semibold text-gray-800 marker:[font-size:0px]">
-            AI Summary <ArrowUpDownIcon />
-          </summary>
+      <Accordion defaultExpanded>
+        <AccordionSummary expandIcon={<ArrowUpDownIcon />}>
+          <Typography>AI Summary</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
           <div
             className="prose"
             dangerouslySetInnerHTML={{
               __html: marked.parse(aiSummary),
             }}
           ></div>
-        </details>
-
-        <details class="group py-1">
-          <summary class="flex cursor-pointer flex-row items-center justify-between py-1 font-semibold text-gray-800 marker:[font-size:0px]">
-            AI Action Items
-            <ArrowUpDownIcon />
-          </summary>
+        </AccordionDetails>
+      </Accordion>
+      <Accordion>
+        <AccordionSummary expandIcon={<ArrowUpDownIcon />}>
+          <Typography>AI Action Items</Typography>
+        </AccordionSummary>
+        <AccordionDetails>
           <div
             className="prose"
             dangerouslySetInnerHTML={{
               __html: marked.parse(aiActionItems),
             }}
           ></div>
-        </details>
-
-        <details class="group py-1">
-          <summary class="flex cursor-pointer flex-row items-center justify-between py-1 font-semibold text-gray-800 marker:[font-size:0px]">
-            Full Transcript
-            <ArrowUpDownIcon />
-          </summary>
+        </AccordionDetails>
+      </Accordion>
+      <Accordion>
+        <AccordionSummary expandIcon={<ArrowUpDownIcon />}>
+          <Typography>Full (raw) Transcript </Typography>
+        </AccordionSummary>
+        <AccordionDetails>
           <div
             className="prose"
             dangerouslySetInnerHTML={{
               __html: marked.parse(entry),
             }}
           ></div>
-        </details>
-      </section>
+        </AccordionDetails>
+      </Accordion>
     </>
   );
 }
@@ -261,6 +265,7 @@ function Chat(props) {
             value={value}
             onChange={(e) => setValue(e.target.value)}
             ref={inputRef}
+            placeholder="Type your prompt here..."
           />
           <Button>Send</Button>
         </div>
