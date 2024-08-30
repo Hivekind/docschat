@@ -18,6 +18,19 @@ ActiveRecord::Base.establish_connection
 class Meeting < ActiveRecord::Base
 end
 
+model = "gemma2:2b"
+LLM =
+  Langchain::LLM::Ollama.new(
+    url: "http://localhost:11434",
+    default_options: {
+      chat_completion_model_name: model,
+      completion_model_name: model,
+      embeddings_model_name: model
+    }
+  )
+
+CHAT_HISTORY = Hash.new { |h, k| h[k] = [] }
+
 module ApplicationCable
   class Connection < ActionCable::Connection::Base
     identified_by :uuid
@@ -32,13 +45,34 @@ end
 
 class MessagesChannel < ApplicationCable::Channel
   def subscribed
-    Rails.logger.info("User subscribed to MessagesChannel")
+    Rails.logger.info("User subscribed to MessagesChannel #{params}")
+    stream_from "#{params[:room]}"
   end
   def unsubscribed
     Rails.logger.info("User unsubscribed from MessagesChannel")
   end
-  def message(data)
+  def chat_message(data)
     Rails.logger.info("User sent a message #{params} #{data}")
+
+    meeting = Meeting.find(data["meeting_id"])
+    history = CHAT_HISTORY[data["meeting_id"]]
+
+    # prime the AI with the meeting entry
+    history << { role: "user", content: meeting.entry } if history.length == 0
+
+    message = data["message"]
+    history << { role: "user", content: message } if message.present?
+
+    Rails.logger.info("Chat history #{history}")
+
+    ai_response = ""
+    LLM.chat(messages: history) do |r|
+      resp = r.chat_completion
+      ai_response += "#{resp}"
+      print resp
+    end
+    history << { role: "assistant", content: ai_response }
+    ActionCable.server.broadcast("meeting", ai_response)
   end
 end
 
@@ -74,149 +108,10 @@ class RootController < ApplicationController
           <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,container-queries"></script>
           <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
         </head>
-        <body class="prose">
+        <body>
           <div id="root"></div>
 
-          <script type="text/babel" data-presets="react" data-type="module">
-            import React, { useState, useEffect } from "react";
-            import { createConsumer } from "@rails/actioncable";
-            import {
-              useQuery,
-              QueryClient,
-              QueryClientProvider,
-            } from "@tanstack/react-query";
-            import { marked } from "marked";
-            import {
-              List,
-              ListItemButton,
-              ListItemAvatar,
-              Avatar,
-              ListItemText,
-              Icon,
-              Tooltip,
-            } from "@mui/material";
-            import { FixedSizeList } from "react-window";
-            import AutoSizer from "react-virtualized-auto-sizer";
-
-            const queryClient = new QueryClient();
-            const consumer = createConsumer("ws://localhost:3000/cable");
-
-
-            function MeetingItem(props) {
-              const { currentMeetingId } = props;
-
-              const { isPending, error, data } = useQuery({
-                queryKey: ["meetings", currentMeetingId],
-                queryFn: () => fetch("/meetings/" + currentMeetingId).then((res) => res.json()),
-              });
-
-              if (isPending) return "Loading...";
-              if (error) return "An error has occurred: " + error.message;
-
-              const { aiSummary, aiActionItems, entry, date, unit, id } = data;
-              return (
-                <div dangerouslySetInnerHTML={{ __html: marked.parse(aiSummary + `\n\n---\n\n` + aiActionItems) }}></div>
-              );
-            }
-
-            function MeetingList({ currentMeetingId, setCurrentMeetingId }) {
-              const { isPending, error, data } = useQuery({
-                queryKey: ["meetings"],
-                queryFn: () => fetch("/meetings").then((res) => res.json()),
-              });
-
-              if (isPending) return "Loading...";
-              if (error) return "An error has occurred: " + error.message;
-
-              const renderRow = ({ index, data, style }) => {
-                const meeting = data[index];
-                const { id, date, unit, topic } = meeting;
-
-                return (
-                  <Tooltip
-                    title={topic}
-                    placement="right-end"
-                    arrow
-                    slotProps={{
-                      popper: {
-                        modifiers: [
-                          {
-                            name: "offset",
-                            options: {
-                              offset: [0, 16],
-                            },
-                          },
-                        ],
-                      },
-                    }}
-                  >
-                    <ListItemButton
-                      style={style}
-                      component="div"
-                      disablePadding
-                      selected={currentMeetingId == meeting.id}
-                      onClick={() => setCurrentMeetingId(id)}
-                    >
-                      <ListItemText primary={"" + unit + " - " + id} secondary={date} />
-                    </ListItemButton>
-                  </Tooltip>
-                );
-              };
-
-              return (
-                <AutoSizer>
-                  {({ height, width }) => (
-                    <FixedSizeList
-                      height={height}
-                      width={width}
-                      itemCount={data.length}
-                      itemSize={64}
-                      itemData={data}
-                      overscanCount={5}
-                    >
-                      {renderRow}
-                    </FixedSizeList>
-                  )}
-                </AutoSizer>
-              );
-            }
-
-            function App() {
-              const [currentMeetingId, setCurrentMeetingId] = useState(461);
-
-              useEffect(() => {
-                const subscription = consumer.subscriptions.create("MessagesChannel", {
-                  received: (recv) => {
-                    console.log(recv);
-                  },
-                });
-              }, []);
-
-              return (
-                <QueryClientProvider client={queryClient}>
-                  <section class="w-screen h-screen m-0 p-0 ">
-                    <div class="flex h-full">
-                      <div class="w-80 overflow-y-auto bg-gray-100">
-                        <MeetingList
-                          currentMeetingId={currentMeetingId}
-                          setCurrentMeetingId={setCurrentMeetingId}
-                        />
-                      </div>
-                      <div class="flex-1 bg-white p-4 overflow-y-auto h-3/5 border-b-2">
-                        <MeetingItem currentMeetingId={currentMeetingId} />
-                      </div>
-                    </div>
-                  </section>
-                </QueryClientProvider>
-              );
-            }
-
-            // Mount and bind the React app to the DOM
-            import { createRoot } from "react-dom";
-            const domNode = document.getElementById("root");
-            const root = createRoot(domNode);
-            root.render(<App />);
-
+          <script type="text/babel" data-presets="react" data-type="module" src="/index.js">
           </script>
 
         </body>
@@ -265,6 +160,11 @@ class DocsApp < Rails::Application
     root "root#index"
   end
 end
+
+ActionCable.server.config.cable = {
+  "adapter" => "redis",
+  "url" => "redis://localhost:6379/1"
+}
 
 Rails.logger =
   ActionCable.server.config.logger =
