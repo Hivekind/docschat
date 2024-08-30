@@ -69,10 +69,16 @@ class MessagesChannel < ApplicationCable::Channel
     LLM.chat(messages: history) do |r|
       resp = r.chat_completion
       ai_response += "#{resp}"
-      print resp
+      ActionCable.server.broadcast(
+        "meeting",
+        { type: "partial", content: resp }
+      )
     end
     history << { role: "assistant", content: ai_response }
-    ActionCable.server.broadcast("meeting", ai_response)
+    ActionCable.server.broadcast(
+      "meeting",
+      { type: "full", content: ai_response }
+    )
   end
 end
 

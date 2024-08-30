@@ -107,8 +107,47 @@ function MeetingList({ currentMeetingId, setCurrentMeetingId }) {
   );
 }
 
+function Messages(props) {
+  const { messages, stream } = props;
+
+  return (
+    <div className="w-full">
+      {messages.map((message, index) => (
+        <div className="flex flex-col w-full leading-1.5 p-4 border-gray-200 bg-gray-100 rounded-e-xl rounded-es-xl dark:bg-gray-700 my-2">
+          <div className="flex items-center space-x-2 rtl:space-x-reverse">
+            <span className="text-sm font-semibold text-gray-900 dark:text-white">
+              {message.role === "user" ? "You" : "Assistant"}
+            </span>
+          </div>
+          <span
+            key={index}
+            dangerouslySetInnerHTML={{
+              __html: marked.parse(message.content),
+            }}
+          ></span>
+        </div>
+      ))}
+      {stream != "" && (
+        <div className="flex flex-col w-full leading-1.5 p-4 border-gray-200 bg-gray-100 rounded-e-xl rounded-es-xl dark:bg-gray-700 my-2">
+          <div className="flex items-center space-x-2 rtl:space-x-reverse">
+            <span className="text-sm font-semibold text-gray-900 dark:text-white">
+              Assistant (streaming)
+            </span>
+          </div>
+          <span
+            dangerouslySetInnerHTML={{
+              __html: marked.parse(stream),
+            }}
+          ></span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Chat(props) {
-  const { currentMeetingId, subscription, messages, setMessages } = props;
+  const { currentMeetingId, subscription, messages, setMessages, stream } =
+    props;
   const [value, setValue] = useState("");
   const inputRef = useRef(null);
 
@@ -129,35 +168,11 @@ function Chat(props) {
     setValue("");
   };
 
-  function Messages(props) {
-    const { messages } = props;
-
-    return (
-      <div className="w-full">
-        {messages.map((message, index) => (
-          <div className="flex flex-col w-full leading-1.5 p-4 border-gray-200 bg-gray-100 rounded-e-xl rounded-es-xl dark:bg-gray-700 my-2">
-            <div className="flex items-center space-x-2 rtl:space-x-reverse">
-              <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                {message.role === "user" ? "You" : "Assistant"}
-              </span>
-            </div>
-            <span
-              key={index}
-              dangerouslySetInnerHTML={{
-                __html: marked.parse(message.content),
-              }}
-            ></span>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
   return (
     <form onSubmit={onSubmit}>
       <div className="flex flex-col h-full">
         <div className="flex">
-          <Messages messages={messages} />
+          <Messages messages={messages} stream={stream} />
         </div>
         <div className="flex w-3/5 items-center">
           <TextField
@@ -179,16 +194,22 @@ function App() {
   const [currentMeetingId, setCurrentMeetingId] = useState(461);
   const [subscription, setSubscription] = useState(null);
   const [messages, setMessages] = useState([]);
+  const [stream, setStream] = useState("");
 
   useEffect(() => {
     const sub = consumer.subscriptions.create(
       { channel: "MessagesChannel", room: `meeting` },
       {
         received: (recv) => {
-          setMessages((messages) => [
-            ...messages,
-            { role: "assistant", content: recv },
-          ]);
+          if (recv.type === "full") {
+            setMessages((messages) => [
+              ...messages,
+              { role: "assistant", content: recv.content },
+            ]);
+            setStream("");
+          } else if (recv.type === "partial") {
+            setStream((stream) => stream + recv.content);
+          }
         },
       }
     );
@@ -216,6 +237,7 @@ function App() {
                 subscription={subscription}
                 messages={messages}
                 setMessages={setMessages}
+                stream={stream}
               />
             </div>
           </div>
