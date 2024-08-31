@@ -74,11 +74,13 @@ class MessagesChannel < ApplicationCable::Channel
         { type: "partial", content: resp }
       )
     end
-    history << { role: "assistant", content: ai_response }
+
     ActionCable.server.broadcast(
       "meeting",
       { type: "full", content: ai_response }
     )
+
+    history << { role: "assistant", content: ai_response }
   end
 end
 
@@ -159,6 +161,7 @@ class DocsApp < Rails::Application
   config.public_file_server.enabled = true
   config.secret_key_base = "change_me"
   config.eager_load = false
+  config.session_store :cache_store
 
   routes.draw do
     mount ActionCable.server => "/cable"
@@ -171,6 +174,9 @@ ActionCable.server.config.cable = {
   "adapter" => "redis",
   "url" => "redis://localhost:6379/1"
 }
+
+Rails.cache =
+  ActiveSupport::Cache::RedisCacheStore.new(url: "redis://localhost:6379/1")
 
 Rails.logger =
   ActionCable.server.config.logger =
