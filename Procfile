@@ -1,2 +1,2 @@
 web: ruby app.rb
-ollama: ollama serve
+# ollama: ollama serve
